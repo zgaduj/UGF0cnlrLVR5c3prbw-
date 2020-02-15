@@ -4,6 +4,7 @@ import (
 	"app/config"
 	"app/src/database"
 	"app/src/handlers"
+	"app/src/middlewares"
 	"flag"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -42,6 +43,7 @@ func main() {
 		r.Use(middleware.Logger)
 		r.Use(middleware.Recoverer)
 		r.Use(middleware.URLFormat)
+		r.Use(middlewares.BodyMaxSize(_config.APP.MaxBodySize))
 		r.Use(render.SetContentType(render.ContentTypeJSON))
 		r.Route("/api", func(r chi.Router) {
 			r.Route("/fetcher", func(r chi.Router) {
