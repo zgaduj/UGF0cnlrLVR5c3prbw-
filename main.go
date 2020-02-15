@@ -5,6 +5,7 @@ import (
 	"app/src/database"
 	"app/src/handlers"
 	"app/src/middlewares"
+	"app/src/worker"
 	"flag"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -21,6 +22,7 @@ type Env struct {
 }
 
 func main() {
+	worker.RunWorker()
 
 	_config := config.GetConfig()
 
@@ -52,6 +54,9 @@ func main() {
 				})
 				r.Post("/", func(writer http.ResponseWriter, request *http.Request) {
 					handlers.FetcherSave(env.db, writer, request)
+				})
+				r.Delete("/{id:[0-9]+}", func(writer http.ResponseWriter, request *http.Request) {
+					handlers.FetcherDelete(env.db, writer, request)
 				})
 			})
 		})

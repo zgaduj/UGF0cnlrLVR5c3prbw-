@@ -22,8 +22,8 @@ func NewConnection(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	err = db.AutoMigrate(&models.FetchModel{}).Error
+	//db.DB().SetMaxIdleConns(0)
+	err = db.AutoMigrate(&models.FetchModel{}, &models.FetchHistoryModel{}).Error
 	if err != nil {
 		log.Panic(err)
 	}

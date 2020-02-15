@@ -4,6 +4,7 @@ import (
 	"app/src/models"
 	"encoding/json"
 	"errors"
+	"github.com/go-chi/chi"
 	"github.com/jinzhu/gorm"
 	"log"
 	"net/http"
@@ -68,7 +69,23 @@ func FetcherSave(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func FetcherDelete(w http.ResponseWriter, r *http.Request) {
+func FetcherDelete(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	var fetcher models.FetchModel
+
+	find := db.Where("id = ?", id).First(&fetcher)
+	findError := find.Error
+	if findError != nil {
+		EncodeMessage(w, findError, 400)
+		return
+	}
+	if find.RecordNotFound() {
+		EncodeMessage(w, errors.New("Not found"), 404)
+		return
+	}
+
+	//del := find.Delete(&fetcher)
 
 }
 

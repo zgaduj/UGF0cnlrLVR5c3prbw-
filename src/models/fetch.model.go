@@ -13,12 +13,14 @@ type BaseModel struct {
 
 type FetchModel struct {
 	BaseModel
-	Url      string `json:"url"`
-	Interval int    `json:"interval"`
+	Url            string `json:"url"`
+	Interval       int    `json:"interval"`
+	LockedDownload bool   `json:"-"`
 }
 
 type FetchHistoryModel struct {
 	BaseModel
+	FetchID  uint    `json:"fetch_id"`
 	Response string  `json:"response"`
 	Duration float32 `json:"duration"`
 }
