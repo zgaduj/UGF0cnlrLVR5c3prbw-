@@ -1,31 +1,43 @@
 package handlers
 
-//
-//import (
-//	"flag"
-//	"github.com/go-chi/chi"
-//	"github.com/go-chi/chi/middleware"
-//	"github.com/go-chi/render"
-//)
-//
-//func InitRoutes() *chi.Mux {
-//	flag.Parse()
-//	r := chi.NewRouter()
-//	r.Use(middleware.RequestID)
-//	r.Use(middleware.Logger)
-//	r.Use(middleware.Recoverer)
-//	r.Use(middleware.URLFormat)
-//	r.Use(render.SetContentType(render.ContentTypeJSON))
-//	r.Route("/api", func(r chi.Router) {
-//		r.Route("/fetcher", func(r chi.Router) {
-//			fetcher := FetcherController()
-//			// / post
-//			r.Get("/", fetcher.methods.get)
-//			r.Post("/", fetcher.methods.save)
-//
-//			// /$id delete
-//
-//		})
-//	})
-//	return r
-//}
+import (
+	"encoding/json"
+	"errors"
+	"log"
+	"net/http"
+)
+
+type EncodeOrErrorInterface struct {
+	Write     http.ResponseWriter
+	Error     error
+	ErrorCode int
+	Encode    interface{}
+}
+
+func EncodeOrError(opt EncodeOrErrorInterface) {
+	log.Print("########### 1")
+	if opt.Error != nil {
+		log.Print("########### 2")
+		EncodeMessage(opt.Write, opt.Error, opt.ErrorCode)
+	} else {
+		log.Print("########### 3")
+		err := json.NewEncoder(opt.Write).Encode(opt.Encode)
+		if err != nil {
+			log.Print("########### 4")
+			EncodeMessage(opt.Write, errors.New("Error encoding data to JSON"), 400)
+		}
+
+	}
+}
+
+type messageError struct {
+	Msg string `json:"msg"`
+}
+
+func EncodeMessage(w http.ResponseWriter, error error, httpCode int) { //httpCode ...int) {
+	log.Print(error.Error())
+	_msg := messageError{}
+	_msg.Msg = error.Error()
+	w.WriteHeader(httpCode)
+	json.NewEncoder(w).Encode(_msg)
+}

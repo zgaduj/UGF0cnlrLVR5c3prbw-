@@ -18,7 +18,7 @@ func GetConfig() *Config {
 	return &Config{
 		APP: &AppConfig{
 			ListeningPort: 8080,
-			MaxBodySize:   5, //1 * 1024 * 1024,
+			MaxBodySize:   1 * 1024 * 1024,
 		},
 		DB: &SQLiteConfig{
 			FilePath: "_data/database.sqlite",
