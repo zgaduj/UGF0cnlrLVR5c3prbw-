@@ -1,7 +1,12 @@
 package config
 
-type SQLiteConfig struct {
-	FilePath string
+type DBConfig struct {
+	//FilePath string
+	Host     string
+	Port     int
+	User     string
+	Password string
+	Database string
 }
 
 type AppConfig struct {
@@ -11,7 +16,7 @@ type AppConfig struct {
 
 type Config struct {
 	APP *AppConfig
-	DB  *SQLiteConfig
+	DB  *DBConfig
 }
 
 func GetConfig() *Config {
@@ -20,8 +25,13 @@ func GetConfig() *Config {
 			ListeningPort: 8080,
 			MaxBodySize:   1 * 1024 * 1024,
 		},
-		DB: &SQLiteConfig{
-			FilePath: "_data/database.sqlite",
+		DB: &DBConfig{
+			//FilePath: "_data/database.sqlite",
+			Host:     "db",
+			Port:     3306,
+			User:     "user",
+			Password: "password",
+			Database: "db",
 		},
 	}
 }

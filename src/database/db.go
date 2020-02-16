@@ -1,12 +1,14 @@
 package database
 
 import (
+	"app/config"
 	"app/src/models"
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"log"
 	"os"
+	"strconv"
 )
+import _ "github.com/go-sql-driver/mysql"
 
 type Store struct {
 	DB *gorm.DB
@@ -14,15 +16,14 @@ type Store struct {
 
 var db *gorm.DB
 
-func NewConnection(path string) (*Store, error) {
-	db, err := gorm.Open("sqlite3", path)
+func NewConnection(dbConf *config.DBConfig) (*Store, error) {
+	db, err := gorm.Open("mysql", dbConf.User+":"+dbConf.Password+"@tcp("+dbConf.Host+":"+strconv.Itoa(dbConf.Port)+")/"+dbConf.Database+"?charset=utf8&parseTime=True&loc=Local")
 	db.LogMode(true)
 	db.SetLogger(log.New(os.Stdout, "\r\n", 0))
 
 	if err != nil {
 		return nil, err
 	}
-	//db.DB().SetMaxIdleConns(0)
 	err = db.AutoMigrate(&models.FetchModel{}, &models.FetchHistoryModel{}).Error
 	if err != nil {
 		log.Panic(err)

@@ -1,9 +1,7 @@
 package worker
 
-func DeployWorker() {
+import "github.com/jinzhu/gorm"
 
-}
-
-func RunFetcher() {
+func RunFetcher(db *gorm.DB) {
 
 }

@@ -35,7 +35,7 @@ func FetcherSave(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			Error:     result.Error,
 			ErrorCode: 400,
 			Encode: struct {
-				ID uint `json:"id"`
+				ID uint64 `json:"id"`
 			}{
 				ID: fetcher.ID,
 			},
@@ -60,7 +60,7 @@ func FetcherSave(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		Error:     find.Save(&fetcherBody).Error,
 		ErrorCode: 400,
 		Encode: struct {
-			ID uint `json:"id"`
+			ID uint64 `json:"id"`
 		}{
 			ID: fetcherBody.ID,
 		},

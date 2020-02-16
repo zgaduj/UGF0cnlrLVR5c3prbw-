@@ -5,10 +5,10 @@ import (
 )
 
 type BaseModel struct {
-	ID        uint       `json:"id",gorm:"primary_key"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at",sql:"index"`
+	ID        uint64    `json:"id",gorm:"primary_key"`
+	CreatedAt time.Time `json:"created_at"`
+	//UpdatedAt time.Time  `json:"updated_at"`
+	//DeletedAt *time.Time `json:"deleted_at",sql:"index"`
 }
 
 type FetchModel struct {
@@ -20,7 +20,7 @@ type FetchModel struct {
 
 type FetchHistoryModel struct {
 	BaseModel
-	FetchID  uint    `json:"fetch_id"`
+	FetchID  uint64  `json:"fetch_id"`
 	Response string  `json:"response"`
 	Duration float32 `json:"duration"`
 }

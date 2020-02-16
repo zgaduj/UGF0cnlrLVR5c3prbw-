@@ -5,7 +5,6 @@ import (
 	"app/src/database"
 	"app/src/handlers"
 	"app/src/middlewares"
-	"app/src/worker"
 	"flag"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -22,7 +21,8 @@ type Env struct {
 }
 
 func main() {
-	worker.RunWorker()
+	log.Print("[API] START")
+	//go RunWorker()
 
 	_config := config.GetConfig()
 
@@ -30,7 +30,7 @@ func main() {
 		config: *_config,
 	}
 
-	dbStore, error := database.NewConnection(env.config.DB.FilePath)
+	dbStore, error := database.NewConnection(env.config.DB)
 	if error != nil {
 		log.Panic(error)
 	} else {
@@ -64,6 +64,7 @@ func main() {
 		_port := strconv.Itoa(env.config.APP.ListeningPort)
 		log.Print("Start listening on port: ", _port)
 		http.ListenAndServe(":"+_port, r)
+
 	}
 	log.Fatal("Error connect with DB")
 }
