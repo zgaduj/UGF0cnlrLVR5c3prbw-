@@ -1,8 +1,8 @@
 package database
 
 import (
+	"app/app/models"
 	"app/config"
-	"app/src/models"
 	"github.com/jinzhu/gorm"
 	"log"
 	"os"

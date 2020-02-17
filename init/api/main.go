@@ -1,10 +1,10 @@
 package main
 
 import (
+	"app/app/database"
+	"app/app/handlers"
+	"app/app/middlewares"
 	"app/config"
-	"app/src/database"
-	"app/src/handlers"
-	"app/src/middlewares"
 	"context"
 	"flag"
 	"github.com/caarlos0/env"
@@ -14,6 +14,8 @@ import (
 	"github.com/jinzhu/gorm"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 )
 
@@ -43,6 +45,9 @@ func main() {
 	appCtx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()
 
+	signals := make(chan os.Signal)
+	signal.Notify(signals, os.Interrupt)
+
 	env := &Env{ // @todo: move to single config?
 		config: &APIConf{
 			API: apiConfig,
@@ -51,8 +56,16 @@ func main() {
 	}
 
 	dbStore, error := database.NewConnection(env.config.DB)
+
+	r := chi.NewRouter()
+
+	_port := strconv.Itoa(env.config.API.ListeningPort)
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: r,
+	}
 	if error != nil {
-		log.Panic(error)
+		panic(error)
 	} else {
 
 		defer dbStore.Close()
@@ -60,7 +73,6 @@ func main() {
 		env.db = dbStore.DB
 
 		flag.Parse()
-		r := chi.NewRouter()
 		r.Use(middleware.RequestID)
 		r.Use(middleware.Logger)
 		r.Use(middleware.Recoverer)
@@ -81,12 +93,21 @@ func main() {
 			})
 		})
 
-		_port := strconv.Itoa(env.config.API.ListeningPort)
 		log.Print("Start listening on port: ", _port)
-		http.ListenAndServe(":"+_port, r)
 
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatalf("ListenAndServe(): %v", err)
+		}
 	}
 	log.Fatal("Error connect with DB")
+
+	go func() {
+		<-signals
+		cancelCtx()
+		if err := srv.Shutdown(context.TODO()); err != nil {
+			panic(err) // failure/timeout shutting down the server gracefully
+		}
+	}()
 
 	<-appCtx.Done()
 }

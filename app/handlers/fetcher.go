@@ -1,12 +1,11 @@
 package handlers
 
 import (
-	"app/src/models"
+	"app/app/models"
 	"encoding/json"
 	"errors"
 	"github.com/go-chi/chi"
 	"github.com/jinzhu/gorm"
-	"log"
 	"net/http"
 )
 
@@ -123,19 +122,28 @@ func FetcherDelete(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 func FetcherGet(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var fetchers []models.FetchModel
 
-	list, err := db.Find(&fetchers).Rows()
-	if err != nil {
-		log.Print(err)
-		w.Write([]byte("nope"))
-	}
+	err := db.Find(&fetchers)
+	//if err != nil {
+	//	log.Print(err)
+	//	EncodeErrorMessage(w, err, 400)
+	//	return
+	//}
 
-	encoded, err2 := json.Marshal(list)
-	if err2 != nil {
-		log.Print(err2)
-		w.Write([]byte("nope2"))
-	}
+	//encoded, err := json.Marshal(list)
+	EncodeOrError(EncodeOrErrorInterface{
+		Write:     w,
+		Error:     err.Error,
+		ErrorCode: 400,
+		Encode:    fetchers,
+	})
+	//if err != nil {
+	//	log.Print(err)
+	//	EncodeErrorMessage(w, err, 400)
+	//	return
+	//}
 
-	w.Write(encoded)
+	//w.Write(encoded)
+	return
 }
 
 func FetcherHistory(w http.ResponseWriter, r *http.Request) {

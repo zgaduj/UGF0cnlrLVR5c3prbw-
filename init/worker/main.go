@@ -1,9 +1,9 @@
 package main
 
 import (
+	"app/app/database"
+	"app/app/models"
 	"app/config"
-	"app/src/database"
-	"app/src/models"
 	"context"
 	"fmt"
 	"github.com/caarlos0/env"
@@ -11,6 +11,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"time"
 )
@@ -52,6 +54,9 @@ func main() {
 		log.Fatal("[ENV-DB] Error parse", err)
 	}
 
+	signals := make(chan os.Signal)
+	signal.Notify(signals, os.Interrupt)
+
 	env := &Env{ // @todo: move to single config?
 		config: &WorkerConf{
 			Worker: workerConfig,
@@ -83,6 +88,12 @@ func main() {
 			}
 		}
 	}
+
+	go func() {
+		<-signals
+		cancelCtx()
+	}()
+
 	<-appCtx.Done()
 }
 
