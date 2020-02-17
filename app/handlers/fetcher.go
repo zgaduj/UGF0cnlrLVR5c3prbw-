@@ -146,6 +146,27 @@ func FetcherGet(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func FetcherHistory(w http.ResponseWriter, r *http.Request) {
+func FetcherHistory(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	var fetcher models.FetchModel
+	id := chi.URLParam(r, "id")
+	find := db.Where("id = ?", id).First(&fetcher)
+	findError := find.Error
+	if findError != nil {
+		EncodeErrorMessage(w, findError, 400)
+		return
+	}
+	if find.RecordNotFound() {
+		EncodeErrorMessage(w, errors.New("Not found"), 404)
+		return
+	}
+
+	var fetcherHistory []models.FetchHistoryModel
+	err := db.Find(&fetcherHistory)
+	EncodeOrError(EncodeOrErrorInterface{
+		Write:     w,
+		Error:     err.Error,
+		ErrorCode: 400,
+		Encode:    fetcherHistory,
+	})
 
 }

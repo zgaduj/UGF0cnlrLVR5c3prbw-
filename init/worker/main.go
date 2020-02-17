@@ -98,7 +98,6 @@ func main() {
 }
 
 func (env *Env) getListUrls() {
-	//var listFetchers []models.FetchModel
 	var fetcher models.FetchModel
 	where := models.FetchModel{LockedDownload: false}
 	rows, err := env.db.Model(fetcher).Where(where).Rows()
@@ -117,7 +116,7 @@ func (env *Env) getListUrls() {
 
 		go env.CheckAndRun(&fetcher)
 
-		log.Print("fetcher ", i, " ", fetcher)
+		//log.Print("fetcher ", i, " ", fetcher)
 		i += 1
 	}
 
@@ -159,14 +158,18 @@ func (env *Env) CheckAndRun(fetcher *models.FetchModel) {
 }
 
 func (env *Env) DownloadContent(fetcher *models.FetchModel) {
-	fetcher.LockedDownload = true
-	env.db.Save(fetcher)
 
-	defer func(fetcher *models.FetchModel) {
+	defer func() {
 		log.Print("*** UNLOCKING FETCHER ", fetcher.Url)
-		fetcher.LockedDownload = false
-		env.db.Save(&fetcher)
-	}(fetcher)
+		//fetcher.LockedDownload = false
+		//env.db.Model(&fetcher).Updates(models.FetchModel{LockedDownload: false}) // not working with false value
+		env.db.Model(&fetcher).Update("LockedDownload", false)
+		time.Sleep(2 * time.Second)
+	}()
+
+	//fetcher.LockedDownload = true
+	log.Print("*** LOCKING FETCHER ", fetcher.Url)
+	env.db.Model(&fetcher).Updates(models.FetchModel{LockedDownload: true})
 
 	startRequest := time.Now()
 	client := http.Client{Timeout: time.Duration(env.config.Worker.Timeout) * time.Second} // @todo: move to env (type time.Duration)
@@ -175,7 +178,10 @@ func (env *Env) DownloadContent(fetcher *models.FetchModel) {
 	log.Print("DOWNLOAD DURATION ", diff.Milliseconds(), diff.Seconds())
 
 	if err != nil {
-		log.Print("Error downloading site content: ", fetcher.Url)
+		log.Print("Error downloading site content: ", fetcher.Url, " ", err)
+		log.Print(time.Duration(env.config.Worker.Timeout) * time.Second)
+		env.db.Model(&fetcher).Updates(models.FetchModel{LockedDownload: false})
+		return
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)

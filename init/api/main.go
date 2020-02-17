@@ -90,6 +90,9 @@ func main() {
 				r.Delete("/{id:[0-9]+}", func(writer http.ResponseWriter, request *http.Request) {
 					handlers.FetcherDelete(env.db, writer, request)
 				})
+				r.Get("/{id:[0-9]+}/history", func(writer http.ResponseWriter, request *http.Request) {
+					handlers.FetcherHistory(env.db, writer, request)
+				})
 			})
 		})
 
