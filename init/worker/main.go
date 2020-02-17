@@ -27,21 +27,6 @@ type Env struct {
 	config *WorkerConf
 }
 
-//type WorkerActionType string
-
-//const (
-//	WActionRequest  WorkerActionType = "request"
-//	WActionResponse                  = "response"
-//	WActionError                     = "error"
-//)
-
-//type WorkerRequest struct {
-//	Action  WorkerActionType
-//	Payload []byte
-//}
-
-//var WorkerChannel = make(chan WorkerRequest)
-
 func main() {
 	log.Print("[WORKER] START")
 	workerConfig := &config.WorkerConfig{}
