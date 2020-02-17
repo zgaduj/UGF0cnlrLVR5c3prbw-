@@ -10,6 +10,15 @@ import (
 )
 import _ "github.com/go-sql-driver/mysql"
 
+type DBConfig struct {
+	//FilePath string
+	Host     string
+	Port     int
+	User     string
+	Password string
+	Database string
+}
+
 type Store struct {
 	DB *gorm.DB
 }
@@ -25,6 +34,9 @@ func NewConnection(dbConf *config.DBConfig) (*Store, error) {
 		return nil, err
 	}
 	err = db.AutoMigrate(&models.FetchModel{}, &models.FetchHistoryModel{}).Error
+
+	db.Model(&models.FetchHistoryModel{}).ModifyColumn("response", "text") // force change column type  varbinary(255) -> text
+
 	if err != nil {
 		log.Panic(err)
 	}

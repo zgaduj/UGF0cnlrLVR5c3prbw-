@@ -7,15 +7,19 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    env_file:
+      - db.env
     environment:
       - GO111MODULE=on
+      - APP_ENDPOINT_PORT=8080
+      - APP_HTTP_MAX_BODY_SIZE=1024
     volumes:
       - ./:/app
       - /home/zgaduj/go:/go
     ports:
-    - 8088:8080
+      - 8088:8080
     working_dir: /app
-    command: go run init/api.go
+    command: go run init/api/main.go
     depends_on:
       - db
 
@@ -25,13 +29,17 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    env_file:
+      - db.env
     environment:
       - GO111MODULE=on
+      - TIMEOUT_HTTP_REQUEST=5
+      - INTERVAL_CHECK_URL=2
     volumes:
       - ./:/app
       - /home/zgaduj/go:/go
     working_dir: /app
-    command: go run init/worker.go
+    command: go run init/worker/main.go
     depends_on:
       - db
 

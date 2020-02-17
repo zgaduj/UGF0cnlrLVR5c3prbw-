@@ -21,6 +21,6 @@ type FetchModel struct {
 type FetchHistoryModel struct {
 	BaseModel
 	FetchID  uint64  `json:"fetch_id"`
-	Response string  `json:"response"`
+	Response []byte  `json:"response",sql:"type:text"`
 	Duration float32 `json:"duration"`
 }

@@ -5,7 +5,9 @@ import (
 	"app/src/database"
 	"app/src/handlers"
 	"app/src/middlewares"
+	"context"
 	"flag"
+	"github.com/caarlos0/env"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -15,19 +17,37 @@ import (
 	"strconv"
 )
 
+type APIConf struct {
+	API *config.APIConfig
+	DB  *config.DBConfig
+}
+
 type Env struct {
 	db     *gorm.DB
-	config config.Config
+	config *APIConf
 }
 
 func main() {
 	log.Print("[API] START")
-	//go RunWorker()
 
-	_config := config.GetConfig()
+	apiConfig := &config.APIConfig{}
+	if err := env.Parse(apiConfig); err != nil {
+		log.Fatal("[ENV-API] Error parse", err)
+	}
 
-	env := &Env{
-		config: *_config,
+	dbConfig := &config.DBConfig{}
+	if err := env.Parse(dbConfig); err != nil {
+		log.Fatal("[ENV-DB] Error parse", err)
+	}
+
+	appCtx, cancelCtx := context.WithCancel(context.Background())
+	defer cancelCtx()
+
+	env := &Env{ // @todo: move to single config?
+		config: &APIConf{
+			API: apiConfig,
+			DB:  dbConfig,
+		},
 	}
 
 	dbStore, error := database.NewConnection(env.config.DB)
@@ -45,7 +65,7 @@ func main() {
 		r.Use(middleware.Logger)
 		r.Use(middleware.Recoverer)
 		r.Use(middleware.URLFormat)
-		r.Use(middlewares.BodyMaxSize(_config.APP.MaxBodySize))
+		r.Use(middlewares.BodyMaxSize(env.config.API.MaxBodySize))
 		r.Use(render.SetContentType(render.ContentTypeJSON))
 		r.Route("/api", func(r chi.Router) {
 			r.Route("/fetcher", func(r chi.Router) {
@@ -61,10 +81,12 @@ func main() {
 			})
 		})
 
-		_port := strconv.Itoa(env.config.APP.ListeningPort)
+		_port := strconv.Itoa(env.config.API.ListeningPort)
 		log.Print("Start listening on port: ", _port)
 		http.ListenAndServe(":"+_port, r)
 
 	}
 	log.Fatal("Error connect with DB")
+
+	<-appCtx.Done()
 }

@@ -20,7 +20,7 @@ func FetcherSave(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	//log.Print("fetcherBody.ID ", fetcherBody.ID)
 
 	if err != nil {
-		EncodeMessage(w, err, 400)
+		EncodeErrorMessage(w, err, 400)
 		return
 	}
 
@@ -47,11 +47,11 @@ func FetcherSave(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	find := db.Where("id = ?", fetcherBody.ID).First(&fetcher)
 	findError := find.Error
 	if findError != nil {
-		EncodeMessage(w, findError, 400)
+		EncodeErrorMessage(w, findError, 400)
 		return
 	}
 	if find.RecordNotFound() {
-		EncodeMessage(w, errors.New("Not found"), 404)
+		EncodeErrorMessage(w, errors.New("Not found"), 404)
 		return
 	}
 
@@ -70,23 +70,54 @@ func FetcherSave(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 }
 
 func FetcherDelete(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		EncodeErrorMessage(w, err, 400)
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 
 	var fetcher models.FetchModel
 
-	find := db.Where("id = ?", id).First(&fetcher)
-	findError := find.Error
-	if findError != nil {
-		EncodeMessage(w, findError, 400)
-		return
-	}
+	find := tx.Where("id = ?", id).First(&fetcher)
 	if find.RecordNotFound() {
-		EncodeMessage(w, errors.New("Not found"), 404)
+		EncodeErrorMessage(w, errors.New("Not found"), 404)
 		return
 	}
 
-	//del := find.Delete(&fetcher)
+	del := find.Delete(&fetcher)
+	if del.Error != nil {
+		EncodeErrorMessage(w, del.Error, 400)
+		return
+	}
 
+	var fetcherHistory models.FetchHistoryModel
+
+	delHistory := tx.Where("fetch_id = ?", id).Delete(&fetcherHistory)
+	if delHistory.Error != nil {
+		EncodeErrorMessage(w, delHistory.Error, 400)
+		return
+	}
+
+	commit := tx.Commit()
+
+	EncodeOrError(EncodeOrErrorInterface{
+		Write:     w,
+		Error:     commit.Error,
+		ErrorCode: 400,
+		Encode: struct {
+			ID int `json:"id"`
+		}{
+			ID: int(fetcher.ID),
+		},
+	})
 }
 
 func FetcherGet(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
