@@ -15,7 +15,6 @@ services:
       - APP_HTTP_MAX_BODY_SIZE=1024
     volumes:
       - ./:/app
-      - /home/zgaduj/go:/go
     ports:
       - 8088:8080
     working_dir: /app
@@ -37,7 +36,6 @@ services:
       - INTERVAL_CHECK_URL=2
     volumes:
       - ./:/app
-      - /home/zgaduj/go:/go
     working_dir: /app
     command: go run init/worker/main.go
     depends_on:
