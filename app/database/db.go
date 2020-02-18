@@ -10,20 +10,9 @@ import (
 )
 import _ "github.com/go-sql-driver/mysql"
 
-type DBConfig struct {
-	//FilePath string
-	Host     string
-	Port     int
-	User     string
-	Password string
-	Database string
-}
-
 type Store struct {
 	DB *gorm.DB
 }
-
-var db *gorm.DB
 
 func NewConnection(dbConf *config.DBConfig) (*Store, error) {
 	db, err := gorm.Open("mysql", dbConf.User+":"+dbConf.Password+"@tcp("+dbConf.Host+":"+strconv.Itoa(dbConf.Port)+")/"+dbConf.Database+"?charset=utf8&parseTime=True&loc=Local")

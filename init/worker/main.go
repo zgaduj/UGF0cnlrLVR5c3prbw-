@@ -5,7 +5,6 @@ import (
 	"app/app/models"
 	"app/config"
 	"context"
-	"fmt"
 	"github.com/caarlos0/env"
 	"github.com/jinzhu/gorm"
 	"io/ioutil"
@@ -22,7 +21,7 @@ type WorkerConf struct {
 	DB     *config.DBConfig
 }
 
-type Env struct {
+type WorkerService struct {
 	db     *gorm.DB
 	config *WorkerConf
 }
@@ -42,7 +41,7 @@ func main() {
 	signals := make(chan os.Signal)
 	signal.Notify(signals, os.Interrupt)
 
-	env := &Env{ // @todo: move to single config?
+	env := &WorkerService{ // @todo: move to single config?
 		config: &WorkerConf{
 			Worker: workerConfig,
 			DB:     dbConfig,
@@ -55,37 +54,34 @@ func main() {
 	dbStore, error := database.NewConnection(env.config.DB)
 	if error != nil {
 		log.Panic(error)
-	} else {
+		cancelCtx()
+	}
 
-		defer dbStore.Close()
+	defer dbStore.Close()
 
-		env.db = dbStore.DB
+	env.db = dbStore.DB
 
-		ticker := time.NewTicker(time.Duration(env.config.Worker.IntervalCheckURL) * time.Second) // @todo: move to env (type time.Duration)
-		done := make(chan bool)
-		for {
-			select {
-			case <-done:
-				return
-			case t := <-ticker.C:
-				fmt.Println("Tick at", t)
-				env.getListUrls()
-			}
+	ticker := time.NewTicker(time.Duration(env.config.Worker.IntervalCheckURL) * time.Second) // @todo: move to env (type time.Duration)
+	for {
+		select {
+		case <-ticker.C:
+			env.getListUrls()
 		}
 	}
 
 	go func() {
 		<-signals
+		ticker.Stop()
 		cancelCtx()
 	}()
 
 	<-appCtx.Done()
 }
 
-func (env *Env) getListUrls() {
+func (worker *WorkerService) getListUrls() {
 	var fetcher models.FetchModel
 	where := models.FetchModel{LockedDownload: false}
-	rows, err := env.db.Model(fetcher).Where(where).Rows()
+	rows, err := worker.db.Model(fetcher).Where(where).Rows()
 
 	defer rows.Close()
 	if err != nil {
@@ -97,9 +93,9 @@ func (env *Env) getListUrls() {
 	log.Print("[getListUrls] ------------------------- START LOOP")
 
 	for rows.Next() {
-		env.db.ScanRows(rows, &fetcher)
+		worker.db.ScanRows(rows, &fetcher)
 
-		go env.CheckAndRun(&fetcher)
+		go worker.CheckAndRun(&fetcher)
 
 		//log.Print("fetcher ", i, " ", fetcher)
 		i += 1
@@ -108,10 +104,10 @@ func (env *Env) getListUrls() {
 	log.Print("[getListUrls] ------------------------- END LOOP")
 }
 
-func (env *Env) CheckAndRun(fetcher *models.FetchModel) {
+func (worker *WorkerService) CheckAndRun(fetcher *models.FetchModel) {
 	log.Print("[CheckAndRun] -------------------------")
 	var fetcherHistory models.FetchHistoryModel
-	lastRun := env.db.Model(fetcherHistory).Last(&fetcherHistory)
+	lastRun := worker.db.Model(fetcherHistory).Last(&fetcherHistory)
 	run := false
 	if lastRun.RecordNotFound() {
 		log.Print("[CheckAndRun] RecordNotFound")
@@ -136,36 +132,36 @@ func (env *Env) CheckAndRun(fetcher *models.FetchModel) {
 	if run {
 		log.Print("[Fetcher ID:" + strconv.FormatUint(fetcher.ID, 10) + "] RUN ")
 
-		go env.DownloadContent(fetcher) // run async sub process
+		go worker.DownloadContent(fetcher) // run async sub process
 
 	}
 
 }
 
-func (env *Env) DownloadContent(fetcher *models.FetchModel) {
+func (worker *WorkerService) DownloadContent(fetcher *models.FetchModel) {
 
 	defer func() {
 		log.Print("*** UNLOCKING FETCHER ", fetcher.Url)
 		//fetcher.LockedDownload = false
-		//env.db.Model(&fetcher).Updates(models.FetchModel{LockedDownload: false}) // not working with false value
-		env.db.Model(&fetcher).Update("LockedDownload", false)
+		//worker.db.Model(&fetcher).Updates(models.FetchModel{LockedDownload: false}) // not working with false value
+		worker.db.Model(&fetcher).Update("LockedDownload", false)
 		time.Sleep(2 * time.Second)
 	}()
 
 	//fetcher.LockedDownload = true
 	log.Print("*** LOCKING FETCHER ", fetcher.Url)
-	env.db.Model(&fetcher).Updates(models.FetchModel{LockedDownload: true})
+	worker.db.Model(&fetcher).Updates(models.FetchModel{LockedDownload: true})
 
 	startRequest := time.Now()
-	client := http.Client{Timeout: time.Duration(env.config.Worker.Timeout) * time.Second} // @todo: move to env (type time.Duration)
+	client := http.Client{Timeout: time.Duration(worker.config.Worker.Timeout) * time.Second} // @todo: move to worker (type time.Duration)
 	resp, err := client.Get(fetcher.Url)
 	diff := time.Since(startRequest)
 	log.Print("DOWNLOAD DURATION ", diff.Milliseconds(), diff.Seconds())
 
 	if err != nil {
 		log.Print("Error downloading site content: ", fetcher.Url, " ", err)
-		log.Print(time.Duration(env.config.Worker.Timeout) * time.Second)
-		env.db.Model(&fetcher).Updates(models.FetchModel{LockedDownload: false})
+		log.Print(time.Duration(worker.config.Worker.Timeout) * time.Second)
+		worker.db.Model(&fetcher).Updates(models.FetchModel{LockedDownload: false})
 		return
 	}
 	defer resp.Body.Close()
@@ -179,11 +175,11 @@ func (env *Env) DownloadContent(fetcher *models.FetchModel) {
 		Duration: float32(diff.Microseconds()) / float32(time.Millisecond),
 	}
 	//saveHistory.CreatedAt = time.Now()
-	historyError := env.db.Save(&saveHistory)
+	historyError := worker.db.Save(&saveHistory)
 	if historyError.Error != nil {
 		log.Print(historyError.Error.Error())
 	}
 	//fetcher.LockedDownload = false
-	//env.db.Save(&fetcher)
+	//worker.db.Save(&fetcher)
 
 }

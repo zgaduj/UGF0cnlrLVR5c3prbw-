@@ -65,7 +65,7 @@ func main() {
 		Handler: r,
 	}
 	if error != nil {
-		panic(error)
+		log.Fatal(error)
 	} else {
 
 		defer dbStore.Close()
@@ -106,10 +106,10 @@ func main() {
 
 	go func() {
 		<-signals
-		cancelCtx()
 		if err := srv.Shutdown(context.TODO()); err != nil {
-			panic(err) // failure/timeout shutting down the server gracefully
+			log.Fatal(err) // failure/timeout shutting down the server gracefully
 		}
+		cancelCtx()
 	}()
 
 	<-appCtx.Done()
